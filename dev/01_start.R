@@ -25,7 +25,7 @@ golem::fill_desc(
   author_first_name = "Morten", # Your First Name
   author_last_name = "Dall", # Your Last Name
   author_email = "dall@sund.ku.dk", # Your Email
-  repo_url = NULL, # The URL of the GitHub Repo (optional),
+  repo_url = "https://github.com/Mortendall/TheMouseColdAtlas", # The URL of the GitHub Repo (optional),
   pkg_version = "0.0.0.9000" # The Version of the package containing the App
 )
 
@@ -35,9 +35,10 @@ golem::set_golem_options()
 ## Install the required dev dependencies ----
 golem::install_dev_deps()
 
+
 ## Create Common Files ----
 ## See ?usethis for more information
-usethis::use_mit_license("Golem User") # You can set another license here
+usethis::use_mit_license("License: CC BY 4.0") # You can set another license here
 usethis::use_readme_rmd(open = FALSE)
 devtools::build_readme()
 # Note that `contact` is required since usethis version 2.1.5
@@ -55,7 +56,7 @@ golem::use_recommended_tests()
 
 ## Favicon ----
 # If you want to change the favicon (default is golem's one)
-golem::use_favicon() # path = "path/to/ico". Can be an online file.
+golem::use_favicon(here::here("inst/app/www/snowflake-2656.png")) # path = "path/to/ico". Can be an online file.
 # golem::remove_favicon() # Uncomment to remove the default favicon
 
 ## Add helper functions ----
