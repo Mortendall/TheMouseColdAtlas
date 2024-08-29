@@ -7,12 +7,28 @@ License: MIT + file LICENSE
 Imports: 
     config (>= 0.3.2),
     golem (>= 0.4.1),
+    pkgload,
+    readxl,
     shiny (>= 1.7.4)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
 URL: https://github.com/Mortendall/TheMouseColdAtlas
 BugReports: https://github.com/Mortendall/TheMouseColdAtlas/issues
+Depends: 
+    tidyverse,
+    shiny
 Suggests: 
-    testthat (>= 3.0.0)
+    ggplotify,
+    here,
+    plotly,
+    rhandsontable,
+    shinycssloaders,
+    arrow,
+    ggrepel,
+    testthat (>= 3.0.0),
+    shinyWidgets,
+    bslib,
+    duckplyr,
+    duckdb
 Config/testthat/edition: 3

@@ -20,8 +20,13 @@ attachment::att_amend_desc()
 
 ## Add modules ----
 ## Create a module infrastructure in R/
-golem::add_module(name = "name_of_module1", with_test = TRUE) # Name of the module
-golem::add_module(name = "name_of_module2", with_test = TRUE) # Name of the module
+golem::add_module(name = "Home", with_test = TRUE) # Name of the module
+golem::add_module(name = "Thermoneutrality", with_test = TRUE) # Name of the module
+golem::add_module(name = "Acute_Cold", with_test = T)
+golem::add_module(name = "Chronic_Cold", with_test = T)
+golem::add_module(name = "Cold_Memory", with_test = T)
+golem::add_module(name = "data_set_information", with_test = T)
+
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*

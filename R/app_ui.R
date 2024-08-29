@@ -8,11 +8,31 @@ app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
-    # Your application UI logic
-    fluidPage(
-      h1("TheMouseColdAtlas")
-    )
-  )
+    bslib::page_navbar(id = "inTabset",
+      bslib::nav_panel(title = "Home",
+                       mod_Home_ui("Home_1"),
+                       value = "Home"
+      ),
+      bslib::nav_panel(title = "Thermoneutrality",
+                       mod_Thermoneutrality_ui("Thermoneutrality_1"),
+                       value = "thermo"
+                       ),
+      bslib::nav_panel(title = "Acute Cold",
+                       mod_Acute_Cold_ui("Acute_Cold_1"),
+                       value = "acute"
+      ),
+      bslib::nav_panel(title = "Chronic Cold",
+                       mod_Cold_Memory_ui("Cold_Memory_1"),
+                       value = "chronic"
+
+    ),
+    bslib::nav_panel(title = "Cold Memory",
+                     mod_Cold_Memory_ui("Cold_Memory_1"),
+                     value = "memory"),
+    bslib::nav_panel(title = "Dataset information",
+                    mod_data_set_information_ui("data_set_information_1"),
+                    value = "infotab")
+  ))
 }
 
 #' Add external Resources to the Application
@@ -38,4 +58,5 @@ golem_add_external_resources <- function() {
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
   )
+
 }
