@@ -12,42 +12,14 @@ mod_Thermoneutrality_ui <- function(id){
   tagList(
     bslib::page_fluid(
       title = "Gene expression at Thermoneutrality",
-      bslib::layout_columns(
-        shiny::column(width = 12,
+      bslib::layout_column_wrap(width = 1/4,
                         selectizeInput(
                           inputId = ns("gene_1"),
                           label = "",
                           choices = NULL,
-                          selected = NULL
-                      )),
-        shiny::column(width = 12,
-                      selectizeInput(
-                        inputId = ns("gene_2"),
-                        label = "",
-                        choices = NULL,
-                        selected = NULL
-                      )),
-        shiny::column(width = 12,
-                      selectizeInput(
-                        inputId = ns("gene_3"),
-                        label = "",
-                        choices = NULL,
-                        selected = NULL
-                      )),
-        shiny::column(width = 12,
-                      selectizeInput(
-                        inputId = ns("gene_4"),
-                        label = "",
-                        choices = NULL,
-                        selected = NULL
-                      )),
-        shiny::column(width = 12,
-                      selectizeInput(
-                        inputId = ns("gene_5"),
-                        label = "",
-                        choices = NULL,
-                        selected = NULL
-                      )),
+                          selected = NULL,
+                          multiple = T
+                      )
       ),
 
       bslib::layout_columns(
@@ -56,21 +28,6 @@ mod_Thermoneutrality_ui <- function(id){
                     )
                     )
 
-      ),
-      bslib::layout_columns(
-        column(3,
-               bslib::card(bslib::card_header("Set number of genes to display"),
-                           bslib::card_body(shinyWidgets::chooseSliderSkin(skin = "Modern",
-                                                                    color = "black"),
-                                     sliderInput(
-                                       inputId = ns("gene_number"),
-                                       label = "",
-                                       value = 1,
-                                       min = 1,
-                                       max = 5,
-                                       step = 1
-                                     )))
-                       )
       ))
 
 
@@ -84,7 +41,7 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
-    #lcreate choices for select
+    #####create choices for select####
     choices <- NULL
     observe(if (is.null(choices)){
       choices <- data$choices
@@ -98,8 +55,11 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
 
     #####Render CPM plot####
     output$cpm_thermo <- plotly::renderPlotly({
+      req(!is.null(input$gene_1[1]))
       display_data <- data$cpmcold|>
-        dplyr::filter(SYMBOL == input$gene_1 & Temperature == "TN")
+        duckplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & Temperature == "TN")
+
+
 
       #sometimes genes are only present in a subset of tissues. Identify those
       #and fill with NA
@@ -112,18 +72,23 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
                                     metadata_tn,
                                     data$tissueorder)
 
+        color_palette <- viridisLite::turbo(length(unique(display_data$SYMBOL)))
+
 
       plotly::plot_ly(data = display_data,
                       x = ~Tissue,
                       y = ~CPM,
-                      color = ~Temperature,
-                      colors = c("#DDD596"),
+                      color = ~SYMBOL,
+                      colors = color_palette,
                       type = "box",
                       boxpoints = "all") |>
         plotly::layout(title = "CPM expression pr. tissue",
                        yaxis = list(title = "CPM"),
-                       xaxis = list(title = "Tissue"))
+                       xaxis = list(title = "Tissue"),
+                       boxmode = "group")
     })
+
+
 
 
   })

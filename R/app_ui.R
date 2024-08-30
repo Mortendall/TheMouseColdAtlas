@@ -9,6 +9,7 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     bslib::page_navbar(id = "inTabset",
+                       theme = bslib::bs_theme(version= 5),
       bslib::nav_panel(title = "Home",
                        mod_Home_ui("Home_1"),
                        value = "Home"
