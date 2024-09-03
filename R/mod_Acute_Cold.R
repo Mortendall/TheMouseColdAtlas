@@ -24,9 +24,13 @@ mod_Acute_Cold_ui <- function(id){
 
       bslib::layout_columns(
         shiny::column(width = 12,
-                      plotly::plotlyOutput(outputId = ns("cpm_thermo"))
+                      uiOutput(outputId = ns("plotlyrender"))
         )
-      )
+      ),
+      bslib::layout_column_wrap(width = 1/2,
+                      DT::DTOutput(outputId = ns("statstable")),
+                      shiny::uiOutput(outputId = ns("tissuevolcano"))
+        )
 
     ))
 }
@@ -68,22 +72,126 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
       display_data <- tissue_fill(display_data,
                                   metadata_tn,
                                   data$tissueorder)
+      #We check if there is more than one gene selected
+      #if one gene is selected, we just plot a plotly output
+      if(length(input$gene_1)==1){
+        plotly::plot_ly(data = display_data,
+                        x = ~Tissue,
+                        y = ~CPM,
+                        color = ~Temperature,
+                        colors =  c("#DDD596", "#0F99B2"),
+                        type = "box",
+                        boxpoints = "all") |>
+          plotly::layout(title = "CPM expression pr. tissue",
+                                          yaxis = list(title = "CPM"),
+                                          xaxis = list(title = "Tissue"),
+                                          boxmode = "group")
+      }
 
-      color_palette <- viridisLite::turbo(length(unique(display_data$SYMBOL)))
+      else{
+        #if more than one gene is selected, we make a number of plots based on
+        #selected genes
+        plotly_list <-plotly_list_generator(display_data, input$gene_1)
+        plotly::subplot(plotly_list,
+                        nrows = length(plotly_list))
 
-
-      plotly::plot_ly(data = display_data,
-                      x = ~Tissue,
-                      y = ~CPM,
-                      color = ~Temperature,
-                      colors = color_palette,
-                      type = "box",
-                      boxpoints = "all") |>
-        suppressWarnings(plotly::layout(title = "CPM expression pr. tissue",
-                                        yaxis = list(title = "CPM"),
-                                        xaxis = list(title = "Tissue"),
-                                        boxmode = "group"))
+      }
     })
+    #calculate height of plotly area based on number of genes selected
+    output$plotlyrender <- renderUI({
+      plotly::plotlyOutput(outputId = ns("cpm_thermo"),
+                           height = height_calculator(input$gene_1))
+    })
+
+    #####UI for volcano graph####
+    output$tissuevolcano <- shiny::renderUI({
+      shiny::tagList(
+        shiny::selectInput(inputId = ns("tissueselect"),
+                           label = "Pick a tissue to highlight",
+                           choices = data$tissueorder$Tissue,
+                           selected = "BAT"),
+        shiny::actionButton(inputId = ns("volcanotrigger"),
+                            label = "Plot volcano for tissue"),
+        plotly::plotlyOutput(outputId = ns("plotlyvolcano")),
+        shiny::uiOutput(ns("volcanodownloads"))
+      )
+    })
+
+    #UI for download buttons for volcano plot
+    output$volcanodownloads <- shiny::renderUI({
+      shiny::tagList(
+        shiny::downloadButton(outputId = ns("downloadDE"),
+                              label = "Download DE data for target tissue"),
+        shiny::downloadButton(outputId = ns("pdfdownload"),
+                              label = "Download plot as PDF")
+      )
+    })
+
+    #####Output for plotly volcano####
+    shiny::observeEvent(input$volcanotrigger,{
+      data$gene <- input$gene_1
+      data$tissue <- input$tissueselect
+    })
+
+    #Plot
+    output$plotlyvolcano <- plotly::renderPlotly({
+      req(data$gene)
+      volcano_plotter(data$decold,
+                      data$gene,
+                      data$tissue,
+                      "acute_vs_TN")
+
+    })
+    #####Download DE data as XLSX####
+    output$downloadDE <-  shiny::downloadHandler(
+
+      filename = function(){
+        paste0(input$tissueselect, "_DE_acute.xlsx")
+      },
+      content = function(file){
+        filedata <- subset(data$decold,
+                           Tissue == input$tissueselect & comparison == "acute_vs_TN") |>
+          dplyr::mutate("-log10FDR"=-log10(FDR))
+        writexl::write_xlsx(x = filedata, path = file)
+      }
+
+
+
+    )
+    #####Download volcano plot as PDF####
+    output$pdfdownload <-  shiny::downloadHandler(
+
+      filename = function(){
+        paste0(input$tissueselect,"_",data$gene, "_volcano_acute_vs_TN.pdf")
+      },
+      content = function(file){
+        target_plot <- pdf_creater(data$decold, data$gene, input$tissueselect, "acute_vs_TN")
+
+        grDevices::pdf(file, width = 16, height = 8)
+        plot(target_plot)
+        grDevices::dev.off()
+
+      }
+    )
+
+    #####Code for table with stats####
+    output$statstable <- DT::renderDT({
+      req(data$decold)
+      DEdata <- subset(data$decold,
+                       SYMBOL == input$gene_1[1] &
+                       comparison == "acute_vs_TN")
+
+      tissueorder <- data$tissueorder |>
+        dplyr::filter(magrittr::is_in(Tissue, DEdata$Tissue)==T)
+      DEdata <- DEdata |>
+        dplyr::arrange(factor(Tissue, tissueorder$Tissue)) |>
+        duckplyr::select(-comparison) |>
+        DT::datatable() |>
+        DT::formatSignif(columns = c("logFC","PValue","FDR"))
+      DEdata
+
+    })
+
   })
 }
 

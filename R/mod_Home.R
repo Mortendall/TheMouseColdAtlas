@@ -64,18 +64,18 @@ mod_Home_server <- function(id, data, parentsession){
       progress <- shiny::Progress$new()
       on.exit(progress$close())
       progress$set(message = "Loading data...", value  = 0)
-      data$choices <- readRDS(here::here("Data/choicescombined.rds"))
+      data$choices <- readRDS(here::here("data/choicescombined.rds"))
       progress$inc(1 / 3, detail = "Loading CPM summary data...")
       data$cpmcold <-
-        arrow::read_parquet(here::here("Data/cpmcoldcombined.parquet"))
+        arrow::read_parquet(here::here("data/cpmcoldcombined.parquet"))
       data$cpmcold$Temperature <- factor(data$cpmcold$Temperature,
                                          c("TN", "Cold_Acute", "Cold_Long", "Cold_Memory"))
 
       progress$inc(2 / 3, detail = "Loading DE data...!")
       data$decold <-
-        arrow::read_parquet(here::here("Data/combined_dedata.parquet"))
+        arrow::read_parquet(here::here("data/combined_dedata.parquet"))
       data$tissueorder <-
-        readRDS(here::here("Data/tissueorder2.rds"))
+        readRDS(here::here("data/tissueorder2.rds"))
       data$tissueorder <- data$tissueorder |>
         duckplyr::mutate(
           Tissue = dplyr::case_when(
@@ -84,7 +84,7 @@ mod_Home_server <- function(id, data, parentsession){
             .default = as.character(Tissue)
           )
         )
-      data$metadata <- read_parquet(here::here("Data/metadata.parquet"))
+      data$metadata <- read_parquet(here::here("data/metadata.parquet"))
       progress$inc(3 / 3, detail = "Loading Done!")
     })
 
