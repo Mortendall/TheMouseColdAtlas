@@ -119,7 +119,7 @@ tissue_fill <- function(data_input, metadata, tissueorder){
 #'
 #' @return a list containing plotly graphs
 
-plotly_list_generator <- function(data_input, gene_input){
+plotly_list_generator <- function(data_input, gene_input, color_vector){
   #detect how many genes we have in gene_input
   plotly_list <- vector(mode = "list",
                       length = length(gene_input))
@@ -129,13 +129,13 @@ plotly_list_generator <- function(data_input, gene_input){
 
 for (gene in gene_input){
     subset_data <- data_input |> duckplyr::filter(SYMBOL == gene)
-    if(isTRUE(gene_input[gene]==gene_input[1])){
+    if(isTRUE(gene==gene_input[1])){
       p <- plotly::plot_ly(
         data = subset_data,
         x = ~ Tissue,
         y = ~ CPM,
         color = ~ Temperature,
-        colors =  c("#DDD596", "#0F99B2"),
+        colors =  color_vector,
         type = "box",
         boxpoints = "all"
       ) |>
@@ -143,9 +143,10 @@ for (gene in gene_input){
           #title = gene,
           yaxis = list(title = "CPM"),
           xaxis = list(title = "Tissue"),
-          boxmode = "group"
+          boxmode = "group",
+          legendgroup = ~Temperature
         ) |>
-        add_annotations(
+        plotly::add_annotations(
           text = gene,
           x = 0.5,
           y = 1,
@@ -157,6 +158,7 @@ for (gene in gene_input){
           font = list(size = 15)
         )
       plotly_list[[gene]]<-p
+
     }
     else{
       p <- plotly::plot_ly(
@@ -164,7 +166,7 @@ for (gene in gene_input){
         x = ~ Tissue,
         y = ~ CPM,
         color = ~ Temperature,
-        colors =  c("#DDD596", "#0F99B2"),
+        colors =  c(color_vector),
         type = "box",
         boxpoints = "all"
       ) |>
@@ -172,9 +174,11 @@ for (gene in gene_input){
           #title = gene,
           yaxis = list(title = "CPM"),
           xaxis = list(title = "Tissue"),
-          boxmode = "group"
+          boxmode = "group",
+          legendgroup = ~Temperature,
+          showlegend = FALSE
         ) |>
-        add_annotations(
+        plotly::add_annotations(
           text = gene,
           x = 0.5,
           y = 1,
@@ -186,6 +190,7 @@ for (gene in gene_input){
           font = list(size = 15)
         )
       plotly_list[[gene]]<-p
+
     }
 }
 
@@ -316,8 +321,171 @@ pdf_creater <- function(input_data, selected_gene, selected_tissue, selected_com
       ggplot2::ylab("-log10(FDR)")
 
     return(target_plot)
+}
+
+#' Generate a data.table object for rendering
+#'
+#' @param input_data a data frame with dedata
+#' @param input_gene a vector of gene names
+#' @param input_tissue a character input of tissue from tissueorder list
+#' @param input_tissueorder a vector of tissues from dataset
+#' @param input_comparison a character input of statistical comparison
+#'
+#' @return a data.table object for rendering
+
+DTdataprep <- function(input_data,
+                       input_gene,
+                       input_tissue,
+                       input_tissueorder,
+                       input_comparison){
+  req(!is.null(input_gene[1]))
+  DEdata <- input_data |>
+    duckplyr::filter(SYMBOL == input_gene[1] & comparison == input_comparison)
+  tissueorder <- input_tissueorder|>
+    duckplyr::filter(magrittr::is_in(input_tissue, DEdata$Tissue)==T)
+  DEdata <- DEdata |>
+    dplyr::arrange(factor(Tissue, tissueorder$Tissue)) |>
+    duckplyr::select(-comparison) |>
+    DT::datatable() |>
+    DT::formatSignif(columns = c("logFC","PValue","FDR"))
+
+  return(DEdata)
+
+}
 
 
+#' MA plotter function
+#'
+#' @param input_data a data frame with dedata
+#' @param input_genes a vector of gene names
+#' @param tissue a character input of tissue from tissueorder list
+#' @param target_comparison a character input of statistical comparison
+#'
+#' @return a plotly object
+
+ma_plotter <- function(input_data, input_genes, tissue, target_comparison){
+  m <- input_data |>
+    duckplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
+                       Tissue == tissue &
+                       comparison == target_comparison)
 
 
+  plotdata <- input_data |>
+    duckplyr::filter(Tissue == tissue &
+                       comparison == target_comparison)  |>
+    dplyr::mutate(is_in = dplyr::case_when(magrittr::is_in(SYMBOL, input_genes) ~ "Y",
+                                           TRUE ~ "N"))
+
+  if(any(!magrittr::is_in(input_genes, plotdata$SYMBOL))){
+    shinyWidgets::sendSweetAlert(title = "Data not found in DE list",
+                                 text = "One of your target genes is not found
+                                         in the DE analysis result file. It was
+                                         likely filtered out due to low
+                                         expression",
+                                 type = "warning")
+  }
+  else{
+    p <- plotly::plot_ly(data = plotdata,
+                         x = ~avg_log2,
+                         y = ~logFC,
+                         color = ~is_in,
+                         type = "scatter",
+                         mode = "markers",
+                         text = ~SYMBOL,
+                         hovertemplate = paste('Gene: <b>%{text}</b>',
+                                               '<br>log2_avr %{y}<br>',
+                                               'logFC: %{x}',
+                                               '<extra></extra>')) |>
+      plotly::add_annotations(x = m$avg_log2,
+                              y = m$logFC,
+                              text = m$SYMBOL,
+                              xref = "x",
+                              yref = "y",
+                              bgcolor = 'lightgrey') |>
+      plotly::layout(title = tissue,
+                     xaxis = list(title = "avg_log2"),
+                     yaxis = list(title = "logFC"),
+                     showlegend = F
+      )
+    return(p)
+  }
+}
+
+#write PDF writer for MA_plot
+#' Title
+#'
+#' @param input_data a data frame with dedata
+#' @param selected_gene a vector of gene names
+#' @param selected_tissue a character input of tissue from tissueorder list
+#' @param selected_comparison a character input of statistical comparison
+#'
+#' @return a ggplot object
+
+pdf_creater_MA <- function(input_data, selected_gene, selected_tissue, selected_comparison){
+
+  m <- input_data |>
+    duckplyr::filter(magrittr::is_in(SYMBOL, selected_gene)&
+                       Tissue == selected_tissue &
+                       comparison == selected_comparison)
+  plotdata <- input_data |>
+    duckplyr::filter(Tissue == selected_tissue &
+                       comparison== selected_comparison) |>
+    dplyr::mutate(is_in = dplyr::case_when(
+      magrittr::is_in(SYMBOL,selected_gene)~ "Y",
+      TRUE ~ "N"
+    ))
+
+  target_plot <- ggplot2::ggplot(plotdata,
+                                 ggplot2::aes(x = avg_log2,
+                                              y = logFC))+
+
+    ggplot2::theme_bw()+
+    ggplot2::geom_point(data = subset(plotdata, is_in=="N"), color = "#7dc4a4")+
+    ggrepel::geom_label_repel(data = subset(plotdata, is_in == "Y"),
+                              ggplot2::aes(x = avg_log2,
+                                           y = logFC,
+                                           label = SYMBOL,
+                                           size = 10),
+                              force_pull = 0.5,
+                              arrow = ggplot2::arrow(length = ggplot2::unit(0.015, "npc"))
+
+    )+
+    ggplot2::geom_point(data = subset(plotdata, is_in=="Y"), color = "black")+
+    ggplot2::theme(axis.title.x = ggplot2::element_text(size = 16),
+                   axis.title.y = ggplot2::element_text(size = 16),
+                   plot.title =  ggplot2::element_text(size = 24,
+                                                       hjust = 0.5),
+                   panel.border = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_text(size = 14),
+                   axis.text.y = ggplot2::element_text(size = 14),
+                   legend.position = "none")+
+    ggplot2::ggtitle(selected_tissue)+
+    ggplot2::xlab("avg_log2")+
+    ggplot2::ylab("logFC")
+
+  return(target_plot)
+}
+
+#' Prism Transformer
+#'
+#' @param cpm_data a CPM data frame in long format
+#' @param input_gene a vector of genes (only first will be used)
+#' @param comparison the group to be used
+#'
+#' @return a data frame for copy-paste into prism
+
+prism_transformer <- function(cpm_data, input_gene, comparison){
+  prismtransformed <-  cpm_data|>
+    duckplyr::filter(magrittr::is_in(SYMBOL, input_gene[1]) & (Temperature == "TN"|Temperature == comparison))  |>
+    #make unique identifiers for groups
+    dplyr::group_by(Tissue, Temperature) |>
+    dplyr::mutate(Group = paste(Temperature,
+                                dplyr::row_number(),
+                                sep = "_")) |>
+    dplyr::arrange(Group) |>
+    dplyr::ungroup() |>
+    dplyr::select(CPM, Tissue, Group) |>
+    tidyr::pivot_wider(names_from = "Group",
+                       values_from = "CPM")
+  return(prismtransformed)
 }

@@ -28,7 +28,11 @@ mod_Home_ui <- function(id){
     shinyWidgets::setBackgroundImage(src = "www/Mouse_tracks_in_snow.jpg"),
     bslib::layout_columns(row_heights = c(1,2,1),
                           col_widths = c(3,6,3),
-                    column(12),
+                    column(12, bslib::tooltip(
+                      bsicons::bs_icon("info-circle",
+                                       title = ""),
+                      "Image courtesy of the National Park Service, public domain."
+                    )),
                     tagList(column(12),
                             bslib::card(
                                 tagList(h3("Welcome to the Mouse Cold Atlas"),
@@ -83,8 +87,9 @@ mod_Home_server <- function(id, data, parentsession){
             Tissue == "Large.intestine" ~ "LargeIntestine",
             .default = as.character(Tissue)
           )
-        )
-      data$metadata <- read_parquet(here::here("data/metadata.parquet"))
+        ) |>
+        dplyr::filter(Tissue != "Spleen")
+      data$metadata <- arrow::read_parquet(here::here("data/metadata.parquet"))
       progress$inc(3 / 3, detail = "Loading Done!")
     })
 

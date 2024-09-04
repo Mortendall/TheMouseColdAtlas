@@ -170,18 +170,24 @@ DEdataCombined <- dplyr::bind_rows(cold_TN_vs_TN,cold_vs_TN, .id = "comparison")
     is.na(SYMBOL)==TRUE~ENSEMBL,
     .default = as.character(SYMBOL)
   ))|>
-  dplyr::select(SYMBOL, Tissue, logFC, PValue, FDR, comparison)
+  dplyr::select(SYMBOL, Tissue, logFC, PValue, FDR, comparison, ENSEMBL, avg_log2_CPM_project_wide)
 
 
 
 arrow::write_parquet(DEdataCombined, here::here("data/DEdataRound2Combined.parquet"))
 
 #####Combine the two datasets
-
+#updated to include log2 data
 acute_set <- read_parquet(here("data/DEdatacoldCombined.parquet")) |>
-  select(-ENSEMBL, -GENENAME, -avg_log2_CPM_project_wide) |>
+  dplyr::mutate(SYMBOL = dplyr::case_when(
+         is.na(SYMBOL)==TRUE~ENSEMBL,
+         .default = as.character(SYMBOL)
+       )) |>
+  select(-ENSEMBL, -GENENAME) |>
+  rename(avg_log2 = avg_log2_CPM_project_wide) |>
   mutate(comparison = "acute_vs_TN")
-long_set <- read_parquet(here("data/DEdataRound2Combined.parquet")) |>
+long_set <- read_parquet(here("data/DEdataRound2Combined_withlog2.parquet")) |>
+  rename(avg_log2 = avg_log2_CPM_project_wide) |>
   select(colnames(acute_set))
 
 combined_set <-   rows_append(acute_set,

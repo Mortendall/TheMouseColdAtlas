@@ -28,8 +28,10 @@ mod_Acute_Cold_ui <- function(id){
         )
       ),
       bslib::layout_column_wrap(width = 1/2,
-                      DT::DTOutput(outputId = ns("statstable")),
-                      shiny::uiOutput(outputId = ns("tissuevolcano"))
+                      bslib::card(shinyWidgets::downloadBttn(outputId = ns("downloadCPM"),
+                                                             label = "Download data for first selected gene"),
+                                  DT::DTOutput(outputId = ns("statstable"))),
+                      bslib::card(shiny::uiOutput(outputId = ns("tissuevolcano")))
         )
 
     ))
@@ -57,13 +59,9 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
     #####Render CPM plot####
     output$cpm_thermo <- plotly::renderPlotly({
       req(!is.null(input$gene_1[1]))
+      req(input$gene_1)
       display_data <- data$cpmcold|>
         duckplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & (Temperature == "TN"|Temperature == "Cold_Acute"))
-
-
-
-      #sometimes genes are only present in a subset of tissues. Identify those
-      #and fill with NA
 
 
       metadata_tn <- data$metadata |>
@@ -91,9 +89,11 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
       else{
         #if more than one gene is selected, we make a number of plots based on
         #selected genes
-        plotly_list <-plotly_list_generator(display_data, input$gene_1)
+        plot_colors <- c("#DDD596", "#0F99B2")
+        plotly_list <-plotly_list_generator(display_data, input$gene_1, plot_colors)
         plotly::subplot(plotly_list,
-                        nrows = length(plotly_list))
+                        nrows = length(plotly_list),
+                        shareX = T)
 
       }
     })
@@ -110,6 +110,10 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
                            label = "Pick a tissue to highlight",
                            choices = data$tissueorder$Tissue,
                            selected = "BAT"),
+        shinyWidgets::radioGroupButtons(inputId = ns("plottype"),
+                                        label = "Select plot type",
+                                        choices = c("Volcano", "MA-plot")),
+        #MA-plot is an added feature - so most IDs still refer to volcano
         shiny::actionButton(inputId = ns("volcanotrigger"),
                             label = "Plot volcano for tissue"),
         plotly::plotlyOutput(outputId = ns("plotlyvolcano")),
@@ -136,10 +140,21 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
     #Plot
     output$plotlyvolcano <- plotly::renderPlotly({
       req(data$gene)
-      volcano_plotter(data$decold,
-                      data$gene,
-                      data$tissue,
-                      "acute_vs_TN")
+
+      if(input$plottype=="Volcano"){
+        volcano_plotter(data$decold,
+                        data$gene,
+                        data$tissue,
+                        "acute_vs_TN")
+      }
+
+      else if(input$plottype == "MA-plot"){
+        ma_plotter(data$decold,
+                   data$gene,
+                   data$tissue,
+                   "acute_vs_TN")
+      }
+
 
     })
     #####Download DE data as XLSX####
@@ -161,15 +176,33 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
     #####Download volcano plot as PDF####
     output$pdfdownload <-  shiny::downloadHandler(
 
+
+
       filename = function(){
-        paste0(input$tissueselect,"_",data$gene, "_volcano_acute_vs_TN.pdf")
+        if(input$plottype == "Volcano"){
+          paste0(input$tissueselect,"_",data$gene, "_volcano_acute_vs_TN.pdf")
+        }
+        else if (input$plottype == "MA-plot"){
+          paste0(input$tissueselect,"_",data$gene, "_MA_plot_acute_vs_TN.pdf")
+        }
+
       },
       content = function(file){
+        if(input$plottype == "Volcano"){
         target_plot <- pdf_creater(data$decold, data$gene, input$tissueselect, "acute_vs_TN")
 
         grDevices::pdf(file, width = 16, height = 8)
         plot(target_plot)
         grDevices::dev.off()
+        }
+
+        else if (input$plottype == "MA-plot"){
+          target_plot <- pdf_creater_MA(data$decold, data$gene, input$tissueselect, "acute_vs_TN")
+
+          grDevices::pdf(file, width = 16, height = 8)
+          plot(target_plot)
+          grDevices::dev.off()
+        }
 
       }
     )
@@ -177,20 +210,40 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
     #####Code for table with stats####
     output$statstable <- DT::renderDT({
       req(data$decold)
-      DEdata <- subset(data$decold,
-                       SYMBOL == input$gene_1[1] &
-                       comparison == "acute_vs_TN")
+      req(input$tissueselect)
 
-      tissueorder <- data$tissueorder |>
-        dplyr::filter(magrittr::is_in(Tissue, DEdata$Tissue)==T)
-      DEdata <- DEdata |>
-        dplyr::arrange(factor(Tissue, tissueorder$Tissue)) |>
-        duckplyr::select(-comparison) |>
-        DT::datatable() |>
-        DT::formatSignif(columns = c("logFC","PValue","FDR"))
-      DEdata
+       DEdata <- DTdataprep(data$decold,
+                                 input$gene_1,
+                                 input$tissueselect,
+                                 data$tissueorder,
+                                 "acute_vs_TN")
+       DEdata
 
     })
+
+    #####Download CPM data####
+
+    output$downloadCPM <-  shiny::downloadHandler(
+
+      filename = function(){
+        paste0(input$gene_1[1], "_acute.xlsx")
+      },
+      content = function(file){
+
+        prismtransformed <- prism_transformer(data$cpmcold,
+                                              input$gene_1,
+                                              "Cold_Acute")
+
+        rawdata <- data$cpmcold |>
+          duckplyr::filter(SYMBOL == input$gene_1[1] &
+                             (Temperature== "TN"|Temperature == "Cold_Acute"))
+
+        filedata <- list(Rawdata = rawdata,
+                         PrismMode = prismtransformed)
+
+        writexl::write_xlsx(x = filedata, path = file)
+
+      })
 
   })
 }

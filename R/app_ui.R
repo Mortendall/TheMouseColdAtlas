@@ -23,7 +23,7 @@ app_ui <- function(request) {
                        value = "acute"
       ),
       bslib::nav_panel(title = "Chronic Cold",
-                       mod_Cold_Memory_ui("Cold_Memory_1"),
+                       mod_Chronic_Cold_ui("Chronic_Cold_1"),
                        value = "chronic"
 
     ),
