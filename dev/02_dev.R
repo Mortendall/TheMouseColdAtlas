@@ -40,15 +40,6 @@ golem::add_js_handler("handlers")
 golem::add_css_file("custom")
 golem::add_sass_file("custom")
 
-golem::use_internal_file("data/choicescombined.rds",
-                         "data/choicescombined.rds",
-                         pkg = get_golem_wd(),
-                         dir = "inst/app/www/data",
-                         open = FALSE,
-                         dir_create = TRUE
-)
-
-
 ## Add internal datasets ----
 ## If you have data in your package
 usethis::use_data_raw(name = "my_dataset", open = FALSE)
