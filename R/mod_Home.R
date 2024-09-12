@@ -68,18 +68,18 @@ mod_Home_server <- function(id, data, parentsession){
       progress <- shiny::Progress$new()
       on.exit(progress$close())
       progress$set(message = "Loading data...", value  = 0)
-      data$choices <- readRDS(here::here("data/choicescombined.rds"))
+      data$choices <- readRDS(system.file("data", "choicescombined.rds", package = "TheMouseColdAtlas", mustWork = TRUE))
       progress$inc(1 / 3, detail = "Loading CPM summary data...")
       data$cpmcold <-
-        arrow::read_parquet(here::here("data/cpmcoldcombined.parquet"))
+        arrow::read_parquet(system.file("data", "cpmcoldcombined.parquet", package = "TheMouseColdAtlas", mustWork = TRUE))
       data$cpmcold$Temperature <- factor(data$cpmcold$Temperature,
                                          c("TN", "Cold_Acute", "Cold_Long", "Cold_Memory"))
 
       progress$inc(2 / 3, detail = "Loading DE data...!")
       data$decold <-
-        arrow::read_parquet(here::here("data/combined_dedata.parquet"))
+        arrow::read_parquet(system.file("data", "combined_dedata.parquet", package = "TheMouseColdAtlas", mustWork = TRUE))
       data$tissueorder <-
-        readRDS(here::here("data/tissueorder2.rds"))
+        readRDS(system.file("data", "tissueorder2.rds", package = "TheMouseColdAtlas", mustWork = TRUE))
       data$tissueorder <- data$tissueorder |>
         duckplyr::mutate(
           Tissue = dplyr::case_when(
@@ -89,7 +89,7 @@ mod_Home_server <- function(id, data, parentsession){
           )
         ) |>
         dplyr::filter(Tissue != "Spleen")
-      data$metadata <- arrow::read_parquet(here::here("data/metadata.parquet"))
+      data$metadata <- arrow::read_parquet(system.file("data", "metadata.parquet", package = "TheMouseColdAtlas", mustWork = TRUE))
       progress$inc(3 / 3, detail = "Loading Done!")
     })
 

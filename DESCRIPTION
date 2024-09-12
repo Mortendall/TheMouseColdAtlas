@@ -23,7 +23,6 @@ Imports:
     ggrepel,
     golem (>= 0.4.1),
     grDevices,
-    here,
     magrittr,
     plotly,
     purrr,
