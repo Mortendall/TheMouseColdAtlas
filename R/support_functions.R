@@ -218,9 +218,7 @@ height_calculator <- function(gene_input){
 #' @param comparison what statistical comparison to display
 #'
 #' @return
-#' @export
-#'
-#' @examples
+
 volcano_plotter <- function(input_data, input_genes, tissue, target_comparison){
   m <- input_data |>
     duckplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
@@ -489,3 +487,103 @@ prism_transformer <- function(cpm_data, input_gene, comparison){
                        values_from = "CPM")
   return(prismtransformed)
 }
+
+#' heatmapplotter
+#'
+#' @param GOobject
+#' @param targetrow
+#' @param DGElist
+#' @param setup
+#' @param cellheights
+#'
+#' @return
+#' @export
+#'
+#' @examples
+heatmapplotter <- function(data_object, input_genes, tissueorder, cellheights, plottitle){
+  #subset genes from input list
+  if(is.null(input_genes)==T){
+    shinyWidgets::sendSweetAlert(type = "error",
+                                 title = "No genes selected",
+                                 text = "Please select input genes from menu")
+  }
+  else{
+    #subset data to include data from selection menu
+    subset_data <- data_object |>
+      duckplyr::filter(SYMBOL %in% input_genes)
+    #factor setup
+    subset_data <- subset_data |>
+      dplyr::arrange(SYMBOL = SYMBOL,
+                     Tissue = base::factor(Tissue, tissueorder$Tissue),
+                      Temperature = base::factor(Temperature, c("TN",
+                                                               "Cold_Acute",
+                                                               "Cold_Long",
+                                                               "Cold_Memory"))) |>
+    #prepare unique name for key
+    dplyr::mutate(unique_sample = paste(Sample, Tissue, sep = "_"))
+    #prepare key
+    key_data <- as.data.frame(subset_data )|>
+      dplyr::distinct(unique_sample, .keep_all = T)
+    key_names <- key_data$unique_sample
+    key <- key_data |>
+      dplyr::select(Tissue, Temperature) |>
+      dplyr::arrange(Tissue = Tissue,
+                     Temperature = base::factor(Temperature, c("TN",
+                                                               "Cold_Acute",
+                                                               "Cold_Long",
+                                                               "Cold_Memory")))
+    rownames(key)<-key_names
+
+
+    #prepare matrix
+
+
+    subset_data <- subset_data |>
+      dplyr::select(unique_sample, CPM, SYMBOL)
+
+    data_matrix <- tidyr::pivot_wider(subset_data,
+                                      names_from = unique_sample,
+                                      values_from = CPM
+                                      )
+
+
+    matrix_rows <- data_matrix$SYMBOL
+
+    data_matrix <- data_matrix|>
+      dplyr::select(rownames(key))
+
+
+    rownames(data_matrix)<- matrix_rows
+    data_matrix <- as.matrix(data_matrix)
+
+    AnnoColor <- list(Temperature = c(TN = "#DDD596",
+                                      Cold_Acute = "#0F99B2",
+                                      Cold_Long = "#313878",
+                                      Cold_Memory = "#7A2C25"))
+
+    Heatmap <- pheatmap::pheatmap(data_matrix,
+                                  treeheight_col = 0,
+                                  treeheight_row = 0,
+                                  scale = "row",
+                                  legend = T,
+                                  na_col = "white",
+                                  Colv = NA,
+                                  na.rm = T,
+                                  cluster_cols = F,
+                                  fontsize_row = 14,
+                                  fontsize_col = 14,
+                                  cellwidth = 2,
+                                  cellheight = cellheights,
+                                  annotation_col = key,
+                                  show_colnames = F,
+                                  show_rownames = T,
+                                  cluster_rows = T,
+                                  main = plottitle,
+                                  fontsize = 16,
+                                  annotation_colors = AnnoColor
+    )
+    return(Heatmap)
+
+  }
+}
+

@@ -332,3 +332,12 @@ metadata <- read_parquet(here("data/cpmcoldcombined.parquet")) |>
 
 write_parquet(metadata,
              here("data/metadata.parquet"))
+
+#####MakeclusterProfiler key####
+gene_names <- read_rds(here("data/choicescombined.rds"))
+
+keys <- clusterProfiler::bitr(gene_names, fromType = "SYMBOL",
+                              toType = "UNIPROT",
+                              OrgDb = "org.Mm.eg.db")
+
+arrow::write_parquet(keys, here::here("data/ensembl_key.parquet"))

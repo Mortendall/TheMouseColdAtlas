@@ -47,6 +47,8 @@ mod_Home_ui <- function(id){
                                                                  label = "Chronic Cold"),
                                         shinyWidgets::actionBttn(ns("memory"),
                                                                  label = "Cold Memory"),
+                                        shinyWidgets::actionBttn(ns("heatmap"),
+                                                                 label = "Create heatmap"),
                                         shinyWidgets::actionBttn(ns("infotab"),
                                                                  label = "Dataset information")),
 
@@ -90,6 +92,7 @@ mod_Home_server <- function(id, data, parentsession){
         ) |>
         dplyr::filter(Tissue != "Spleen")
       data$metadata <- arrow::read_parquet(here::here("data/metadata.parquet"))
+      data$ensembl <- arrow::read_parquet(here::here("data/ensembl_key.parquet"))
       progress$inc(3 / 3, detail = "Loading Done!")
     })
 
@@ -125,6 +128,12 @@ mod_Home_server <- function(id, data, parentsession){
       updateTabsetPanel(session = parentsession,
                         inputId = "inTabset",
                         selected = "infotab")
+    })
+
+    observeEvent(input$heatmap,{
+      updateTabsetPanel(session = parentsession,
+                        inputId = "inTabset",
+                        selected = "heatmap")
     })
 
   })

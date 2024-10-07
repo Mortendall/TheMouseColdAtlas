@@ -26,6 +26,7 @@ golem::add_module(name = "Acute_Cold", with_test = T)
 golem::add_module(name = "Chronic_Cold", with_test = T)
 golem::add_module(name = "Cold_Memory", with_test = T)
 golem::add_module(name = "data_set_information", with_test = T)
+golem::add_module("heatmapper", with_test = T)
 
 
 ## Add helper functions ----

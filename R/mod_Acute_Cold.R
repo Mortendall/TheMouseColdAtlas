@@ -51,7 +51,7 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
       shiny::updateSelectizeInput(session,
                                   "gene_1",
                                   choices = choices,
-                                  selected = "Tbc1d4",
+                                  selected = "Ppargc1a",
                                   server = TRUE)
     })
 

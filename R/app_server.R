@@ -13,4 +13,5 @@ app_server <- function(input, output, session) {
   mod_Chronic_Cold_server("Chronic_Cold_1",dataobject,parentsession)
   mod_Acute_Cold_server("Acute_Cold_1",dataobject,parentsession)
   mod_Thermoneutrality_server("Thermoneutrality_1",dataobject,parentsession)
+  mod_heatmapper_server("heatmapper_1", dataobject, parentsession)
 }

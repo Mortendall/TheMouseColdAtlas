@@ -30,6 +30,9 @@ app_ui <- function(request) {
     bslib::nav_panel(title = "Cold Memory",
                      mod_Cold_Memory_ui("Cold_Memory_1"),
                      value = "memory"),
+    bslib::nav_panel(title= "Heat Map Creator",
+                     mod_heatmapper_ui("heatmapper_1"),
+                     value = "heatmap"),
     bslib::nav_panel(title = "Dataset information",
                     mod_data_set_information_ui("data_set_information_1"),
                     value = "infotab")
