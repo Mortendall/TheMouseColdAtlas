@@ -337,7 +337,42 @@ write_parquet(metadata,
 gene_names <- read_rds(here("data/choicescombined.rds"))
 
 keys <- clusterProfiler::bitr(gene_names, fromType = "SYMBOL",
-                              toType = "UNIPROT",
+                              toType = "ENSEMBL",
                               OrgDb = "org.Mm.eg.db")
 
+
 arrow::write_parquet(keys, here::here("data/ensembl_key.parquet"))
+
+#####get secretion status####
+#download.file("https://download.jensenlab.org/mouse_compartment_knowledge_full.tsv", destfile = here::here("data/mouse_compartment_knowledge_full.tsv"))
+database <- read_tsv_arrow("data/mouse_compartment_knowledge_full.tsv",col_names = c("ENSEMBL","SYMBOL","GO","Term","Source","Evidence","Score"))
+
+#many databases included. Make it more simple?
+#UniProtKB-SubCell is a large set?
+
+database <- database  |>
+  dplyr::select(SYMBOL, Source, Term, Score)
+arrow::write_parquet(database, here::here("data/localizationdata.parquet") )
+
+#####Human/mouse ENS converter####
+mouse_symbols <- arrow::read_parquet(here::here("data/cpmcoldcombined.parquet")) |>
+  duckplyr::select(SYMBOL, ENSEMBL) |>
+  duckplyr::distinct(ENSEMBL,.keep_all = T) |>
+  duckplyr::mutate(SYMBOL =toupper(SYMBOL))
+
+#join human ENS
+
+human_symbols <- clusterProfiler::bitr(mouse_symbols$SYMBOL,fromType = "SYMBOL", toType = "ENSEMBL",
+                                       OrgDb = "org.Hs.eg.db",drop = F) |>
+  duckplyr::distinct(ENSEMBL,.keep_all = T)
+joined_key <- duckplyr::left_join(mouse_symbols, human_symbols, by = c("SYMBOL"="SYMBOL")) |>
+  duckplyr::rename(ENSEMBL_mouse = ENSEMBL.x,
+                   ENSEMBL_human = ENSEMBL.y) |>
+  duckplyr::mutate(SYMBOL = stringr::str_to_title(SYMBOL))
+arrow::write_parquet(joined_key, here::here("data/ensembl_converter.parquet"))
+
+#make human protein atlas plugin
+prot_file <- arrow::read_tsv_arrow(here::here("doc/proteinatlas.tsv")) |>
+  duckplyr::select(Ensembl, Gene, `Secretome location`, `Secretome function`)
+arrow::write_parquet(prot_file, here::here("data/secretome.parquet"))
+

@@ -3,6 +3,26 @@
     "Version": "4.3.1",
     "Repositories": [
       {
+        "Name": "BioCsoft",
+        "URL": "https://bioconductor.org/packages/3.18/bioc"
+      },
+      {
+        "Name": "BioCann",
+        "URL": "https://bioconductor.org/packages/3.18/data/annotation"
+      },
+      {
+        "Name": "BioCexp",
+        "URL": "https://bioconductor.org/packages/3.18/data/experiment"
+      },
+      {
+        "Name": "BioCworkflows",
+        "URL": "https://bioconductor.org/packages/3.18/workflows"
+      },
+      {
+        "Name": "BioCbooks",
+        "URL": "https://bioconductor.org/packages/3.18/books"
+      },
+      {
         "Name": "CRAN",
         "URL": "https://packagemanager.posit.co/cran/latest"
       }
@@ -103,8 +123,8 @@
     "Biostrings": {
       "Package": "Biostrings",
       "Version": "2.70.3",
-      "Source": "Repository",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.18",
       "Requirements": [
         "BiocGenerics",
         "GenomeInfoDb",
@@ -202,8 +222,8 @@
     "GenomeInfoDb": {
       "Package": "GenomeInfoDb",
       "Version": "1.38.8",
-      "Source": "Repository",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.18",
       "Requirements": [
         "BiocGenerics",
         "GenomeInfoDbData",
@@ -401,34 +421,6 @@
         "utils"
       ],
       "Hash": "1716e201f81ced0f456dd5ec85fe20f8"
-    },
-    "TheMouseColdAtlas": {
-      "Package": "TheMouseColdAtlas",
-      "Version": "0.0.0.9000",
-      "Source": "unknown",
-      "Requirements": [
-        "DT",
-        "arrow",
-        "bsicons",
-        "bslib",
-        "config",
-        "dplyr",
-        "duckplyr",
-        "ggplot2",
-        "ggrepel",
-        "golem",
-        "grDevices",
-        "here",
-        "magrittr",
-        "plotly",
-        "purrr",
-        "shiny",
-        "shinyWidgets",
-        "tidyr",
-        "viridisLite",
-        "writexl"
-      ],
-      "Hash": "c21821a0c539ebaebc5d08cab316cef3"
     },
     "XVector": {
       "Package": "XVector",
@@ -1383,8 +1375,8 @@
     "ggtree": {
       "Package": "ggtree",
       "Version": "3.10.1",
-      "Source": "Repository",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.18",
       "Requirements": [
         "R",
         "ape",
@@ -2998,8 +2990,8 @@
     "zlibbioc": {
       "Package": "zlibbioc",
       "Version": "1.48.2",
-      "Source": "Repository",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.18",
       "Hash": "2344be62c2da4d9e9942b5d8db346e59"
     }
   }

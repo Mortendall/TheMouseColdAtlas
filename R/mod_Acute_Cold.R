@@ -7,34 +7,53 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_Acute_Cold_ui <- function(id){
+mod_Acute_Cold_ui <- function(id) {
   ns <- NS(id)
   tagList(
     bslib::page_fluid(
       title = "Gene expression at Acute Cold",
-      bslib::layout_column_wrap(width = 1/4,
-                                selectizeInput(
-                                  inputId = ns("gene_1"),
-                                  label = "",
-                                  choices = NULL,
-                                  selected = NULL,
-                                  multiple = T
-                                )
-      ),
-
-      bslib::layout_columns(
-        shiny::column(width = 12,
-                      uiOutput(outputId = ns("plotlyrender"))
+      bslib::layout_column_wrap(
+        width = 1 / 4,
+        selectizeInput(
+          inputId = ns("gene_1"),
+          label = "Select your genes of interest",
+          choices = NULL,
+          selected = NULL,
+          multiple = T
         )
       ),
-      bslib::layout_column_wrap(width = 1/2,
-                      bslib::card(shinyWidgets::downloadBttn(outputId = ns("downloadCPM"),
-                                                             label = "Download data for first selected gene"),
-                                  DT::DTOutput(outputId = ns("statstable"))),
-                      bslib::card(shiny::uiOutput(outputId = ns("tissuevolcano")))
-        )
 
-    ))
+      bslib::layout_columns(shiny::column(width = 12,
+                                          uiOutput(
+                                            outputId = ns("plotlyrender")
+                                          ))),
+      bslib::layout_column_wrap(
+        width = 1 / 2,
+        bslib::card(
+          shinyWidgets::downloadBttn(outputId = ns("downloadCPM"),
+                                     label = "Download data for first selected gene"),
+          uiOutput(outputId = ns("ensembllink"))
+          ,
+          DT::DTOutput(outputId = ns("statstable"))
+        ),
+        bslib::card(shiny::uiOutput(outputId = ns("tissuevolcano")))
+      ),
+      bslib::layout_column_wrap(width = 1 / 2,
+                                tagList(
+                                  bslib::card(
+                                    shiny::h5("Secretion:"),
+                                              # bslib::tooltip(bsicons::bs_icon("info-circle"),
+                                              #                "Data obtained from",
+                                              #                tags$a("COMPARTMENTS.",
+                                              #                       href = "https://compartments.jensenlab.org/Downloads"),
+                                              #                "Scores indicate certainty of location."),
+
+                                    bslib::card_body(uiOutput(outputId = ns("localizationui"))
+
+                                  )
+                                ))
+    )
+  ))
 }
 
 #' Acute_Cold Server Functions
@@ -70,30 +89,47 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
       display_data <- tissue_fill(display_data,
                                   metadata_tn,
                                   data$tissueorder)
+
+
       #We check if there is more than one gene selected
       #if one gene is selected, we just plot a plotly output
       if(length(input$gene_1)==1){
-        plotly::plot_ly(data = display_data,
-                        x = ~Tissue,
-                        y = ~CPM,
-                        color = ~Temperature,
-                        colors =  c("#DDD596", "#0F99B2"),
-                        type = "box",
-                        boxpoints = "all") |>
-          plotly::layout(title = "CPM expression pr. tissue",
-                                          yaxis = list(title = "CPM"),
-                                          xaxis = list(title = "Tissue"),
-                                          boxmode = "group")
+
+         plotly::plot_ly(data = display_data,
+                         x = ~Tissue,
+                         y = ~CPM,
+                         color = ~Temperature,
+                         colors =  c("#DDD596", "#0F99B2"),
+                         type = "box",
+                         boxpoints = "all") |>
+           plotly::layout(title = "CPM expression pr. tissue",
+                                           yaxis = list(title = "CPM"),
+                                           xaxis = list(title = "Tissue",
+                                                        tickmode = "linear",
+                                                        dtick  =0.3,
+                                                        autorange = "max",
+                                                        range = c(-1,19),
+                                                        categoryorder = "array",
+                                                        categoryarray = data$tissueorder$Tissue,
+                                                        tickmode = "array",
+                                                        tickvals = data$tissueorder$Tissue),
+                                           boxmode = "group"
+
+                          )
       }
 
       else{
         #if more than one gene is selected, we make a number of plots based on
         #selected genes
         plot_colors <- c("#DDD596", "#0F99B2")
-        plotly_list <-plotly_list_generator(display_data, input$gene_1, plot_colors)
-        plotly::subplot(plotly_list,
+        plotly_list <-plotly_list_generator(display_data, input$gene_1, plot_colors, data$tissueorder)
+        plots <- plotly::subplot(plotly_list,
                         nrows = length(plotly_list),
-                        shareX = T)
+                        shareX = F) |> plotly::layout(boxmode = "group")
+
+        plots <- plots |>
+          plotly::layout("CPM expression pr. tissue")
+        plots
 
       }
     })
@@ -208,7 +244,7 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
     )
 
     #####Code for table with stats####
-    output$statstable <- DT::renderDT({
+    output$statstable <- DT::renderDataTable({
       req(data$decold)
       req(input$tissueselect)
 
@@ -217,7 +253,7 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
                                  input$tissueselect,
                                  data$tissueorder,
                                  "acute_vs_TN")
-       DEdata
+      DEdata
 
     })
 
@@ -244,6 +280,39 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
         writexl::write_xlsx(x = filedata, path = file)
 
       })
+
+    output$ensembllink <- shiny::renderUI({
+      req(input$gene_1)
+      ncbi_url_generator(target_gene = input$gene_1[1],
+                         gene_database = data$ensembl,
+                         ensembl_converter = data$ensembl_converter)
+
+    })
+
+    output$localizationui <- shiny::renderUI({
+      req(input$gene_1)
+      if(magrittr::is_in(input$gene_1[1], data$localization$Gene)==F){
+        shiny::h6(paste0(input$gene_1[1], " is not found in the localization dataset"))
+      }
+      else{
+        shiny::tagList(shiny::h6("Predicted secretion status, based on human protein atlas"),
+                       shiny::tableOutput(outputId = ns("localizationtable")))
+      }
+      # if(magrittr::is_in(input$gene_1[1], data$localization$SYMBOL)==F){
+      #   shiny::h6(paste0(input$gene_1[1], " is not found in the localization dataset"))
+      # }
+      # else{
+      #   DT::dataTableOutput(outputId = ns("localizationtable"))
+      # }
+    })
+
+    output$localizationtable <- shiny::renderTable({
+      req(input$gene_1)
+      location_table <-secretome_preparer(input$gene_1,
+                                          data$localization,
+                                          data$ensembl_converter)
+      location_table
+    })
 
   })
 }

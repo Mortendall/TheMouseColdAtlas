@@ -16,7 +16,7 @@ mod_Home_ui <- function(id){
     tags$head(
       tags$style(HTML("
       .card {
-        background-color: rgba(255, 255, 255, 0.5);
+        background-color: rgba(211, 211, 211, 0.5);
         border: none;
       }
       .bttn {
@@ -25,17 +25,19 @@ mod_Home_ui <- function(id){
         color: black;
       }
     "))),
-    shinyWidgets::setBackgroundImage(src = "www/Mouse_tracks_in_snow.jpg"),
+    #shinyWidgets::setBackgroundImage(src = "www/Mouse_tracks_in_snow.jpg"),
     bslib::layout_columns(row_heights = c(1,2,1),
                           col_widths = c(3,6,3),
-                    column(12, bslib::tooltip(
-                      bsicons::bs_icon("info-circle",
-                                       title = ""),
-                      "Image courtesy of the National Park Service, public domain."
-                    )),
+                    column(12
+                    #        , bslib::tooltip(
+                    #   bsicons::bs_icon("info-circle",
+                    #                    title = ""),
+                    #   "Image courtesy of the National Park Service, public domain."
+                    # )
+                    ),
                     tagList(column(12),
                             bslib::card(
-                                tagList(h3("Welcome to the Mouse Cold Atlas"),
+                                tagList(h3(shiny::tags$b("Welcome to the Mouse Cold Atlas")),
                                         h5("Explore the multi-organ regulation
                                            of your favorite gene, in response to
                                            temperature challenges:"),
@@ -50,7 +52,9 @@ mod_Home_ui <- function(id){
                                         shinyWidgets::actionBttn(ns("heatmap"),
                                                                  label = "Create heatmap"),
                                         shinyWidgets::actionBttn(ns("infotab"),
-                                                                 label = "Dataset information")),
+                                                                 label = "Dataset information"),
+                                        shiny::img(src = "www/CBMR + KU MINI LOGO_RED.png",
+                                                   align = "center")),
 
                                 align = "center"),
                             column(12)),
@@ -93,6 +97,8 @@ mod_Home_server <- function(id, data, parentsession){
         dplyr::filter(Tissue != "Spleen")
       data$metadata <- arrow::read_parquet(here::here("data/metadata.parquet"))
       data$ensembl <- arrow::read_parquet(here::here("data/ensembl_key.parquet"))
+      data$ensembl_converter <- arrow::read_parquet(here::here("data/ensembl_converter.parquet"))
+      data$localization <- arrow::read_parquet(here::here("data/secretome.parquet"))
       progress$inc(3 / 3, detail = "Loading Done!")
     })
 

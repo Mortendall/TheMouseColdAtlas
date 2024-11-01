@@ -15,7 +15,7 @@ mod_Cold_Memory_ui <- function(id){
       bslib::layout_column_wrap(width = 1/4,
                                 selectizeInput(
                                   inputId = ns("gene_1"),
-                                  label = "",
+                                  label = "Select your genes of interest",
                                   choices = NULL,
                                   selected = NULL,
                                   multiple = T
@@ -30,9 +30,26 @@ mod_Cold_Memory_ui <- function(id){
       bslib::layout_column_wrap(width = 1/2,
                                 bslib::card(shinyWidgets::downloadBttn(outputId = ns("downloadCPM"),
                                                                        label = "Download data for first selected gene")
+                                            ,
+                                            uiOutput(outputId = ns("ensembllink"))
                                             ,DT::DTOutput(outputId = ns("statstable"))),
                                 bslib::card(shiny::uiOutput(outputId = ns("tissuevolcano")))
-      )
+      ),
+      bslib::layout_column_wrap(width = 1 / 2,
+                                tagList(
+                                  bslib::card(
+                                    shiny::h5("Secretion:"),
+                                    # bslib::tooltip(
+                                    #   bsicons::bs_icon("info-circle"),
+                                    #   "Data obtained from",
+                                    #   tags$a("COMPARTMENTS.",
+                                    #          href = "https://compartments.jensenlab.org/Downloads"),
+                                    #   "Scores indicate certainty of location."
+                                    # ),
+                                    bslib::card_body(uiOutput(outputId = ns("localizationui")))
+
+                                  )
+                                ))
 
     ))
 }
@@ -93,7 +110,7 @@ mod_Cold_Memory_server <- function(id,data,parentsession){
                                             plot_colors)
         plotly::subplot(plotly_list,
                         nrows = length(plotly_list),
-                        shareX = T)
+                        shareX = F)
 
       }
     })
@@ -243,6 +260,38 @@ mod_Cold_Memory_server <- function(id,data,parentsession){
 
       })
 
+    output$ensembllink <- shiny::renderUI({
+      req(input$gene_1)
+      ncbi_url_generator(target_gene = input$gene_1[1],
+                         gene_database = data$ensembl,
+                         ensembl_converter = data$ensembl_converter)
+
+    })
+
+    output$localizationui <- shiny::renderUI({
+      req(input$gene_1)
+      if(magrittr::is_in(input$gene_1[1], data$localization$Gene)==F){
+        shiny::h6(paste0(input$gene_1[1], " is not found in the localization dataset"))
+      }
+      else{
+        shiny::tagList(shiny::h6("Predicted secretion status, based on human protein atlas"),
+                       shiny::tableOutput(outputId = ns("localizationtable")))
+      }
+      # if(magrittr::is_in(input$gene_1[1], data$localization$SYMBOL)==F){
+      #   shiny::h6(paste0(input$gene_1[1], " is not found in the localization dataset"))
+      # }
+      # else{
+      #   DT::dataTableOutput(outputId = ns("localizationtable"))
+      # }
+    })
+
+    output$localizationtable <- shiny::renderTable({
+      req(input$gene_1)
+      location_table <-secretome_preparer(input$gene_1,
+                                          data$localization,
+                                          data$ensembl_converter)
+      location_table
+    })
   })
 }
 

@@ -7,3 +7,6 @@ data
 dev
 tests
 C:/Users/tvb217/Documents/R/tmp/TheMouseColdAtlas/data/DEdatacoldCombined.parquet
+data/mouse_compartment_knowledge_full.tsv
+doc/blood_ms_concentration.tsv
+doc/proteinatlas.tsv

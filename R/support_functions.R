@@ -66,19 +66,19 @@ tissue_fill <- function(data_input, metadata, tissueorder){
         missing_samples <- purrr::map(subset_by_gene,~duckplyr::filter(metadata, !magrittr::is_in(Sample,
                                                                                  .x$Sample)))
 
-        missing_samples <- map2(missing_samples,
+        missing_samples <- purrr::map2(missing_samples,
                                 subset_by_gene,
                                 ~duckplyr::mutate(.x, ENSEMBL = .y$ENSEMBL[1],
                                                     SYMBOL = .y$SYMBOL[1],
                                                     CPM = NA))
 
         #select data in right order
-        missing_samples <- map(missing_samples,
+        missing_samples <- purrr::map(missing_samples,
                                ~duckplyr::select(.x, colnames(data_input)))
 
         #append each dataset
 
-        subset_by_gene <- map2(subset_by_gene,
+        subset_by_gene <- purrr::map2(subset_by_gene,
                                missing_samples,
                               ~duckplyr::rows_append(.x,
                                                         .y))
@@ -119,7 +119,7 @@ tissue_fill <- function(data_input, metadata, tissueorder){
 #'
 #' @return a list containing plotly graphs
 
-plotly_list_generator <- function(data_input, gene_input, color_vector){
+plotly_list_generator <- function(data_input, gene_input, color_vector, tissueorder){
   #detect how many genes we have in gene_input
   plotly_list <- vector(mode = "list",
                       length = length(gene_input))
@@ -142,7 +142,9 @@ for (gene in gene_input){
         plotly::layout(
           #title = gene,
           yaxis = list(title = "CPM"),
-          xaxis = list(title = "Tissue"),
+          xaxis = list(title = "Tissue",
+                       autorange ="min",
+                       range = c(-1,19)),
           boxmode = "group",
           legendgroup = ~Temperature
         ) |>
@@ -166,14 +168,17 @@ for (gene in gene_input){
         x = ~ Tissue,
         y = ~ CPM,
         color = ~ Temperature,
-        colors =  c(color_vector),
+        colors =  color_vector,
         type = "box",
-        boxpoints = "all"
+        boxpoints = "all",
+        alignmentgroup = "group1"
       ) |>
         plotly::layout(
           #title = gene,
           yaxis = list(title = "CPM"),
-          xaxis = list(title = "Tissue"),
+          xaxis = list(title = "Tissue",
+                       autorange ="min",
+                       range = c(-1,19)),
           boxmode = "group",
           legendgroup = ~Temperature,
           showlegend = FALSE
@@ -344,8 +349,9 @@ DTdataprep <- function(input_data,
   DEdata <- DEdata |>
     dplyr::arrange(factor(Tissue, tissueorder$Tissue)) |>
     duckplyr::select(-comparison) |>
-    DT::datatable() |>
-    DT::formatSignif(columns = c("logFC","PValue","FDR"))
+    DT::datatable(class = 'cell-border-stripes') |>
+    DT::formatSignif(columns = c("logFC","PValue","FDR")) |>
+    DT::formatRound(columns = c("avg_log2", "logFC"),digits = 2)
 
   return(DEdata)
 
@@ -500,7 +506,8 @@ prism_transformer <- function(cpm_data, input_gene, comparison){
 #' @export
 #'
 #' @examples
-heatmapplotter <- function(data_object, input_genes, tissueorder, cellheights, plottitle){
+heatmapplotter <- function(data_object, input_genes,input_tissues, tissueorder, cellheights,
+                           cellwidths, plottitle, rowfont, fontsize ){
   #subset genes from input list
   if(is.null(input_genes)==T){
     shinyWidgets::sendSweetAlert(type = "error",
@@ -520,7 +527,8 @@ heatmapplotter <- function(data_object, input_genes, tissueorder, cellheights, p
                                                                "Cold_Long",
                                                                "Cold_Memory"))) |>
     #prepare unique name for key
-    dplyr::mutate(unique_sample = paste(Sample, Tissue, sep = "_"))
+    dplyr::mutate(unique_sample = paste(Sample, Tissue, sep = "_"))|>
+      dplyr::filter(magrittr::is_in(Tissue, input_tissues))
     #prepare key
     key_data <- as.data.frame(subset_data )|>
       dplyr::distinct(unique_sample, .keep_all = T)
@@ -531,15 +539,17 @@ heatmapplotter <- function(data_object, input_genes, tissueorder, cellheights, p
                      Temperature = base::factor(Temperature, c("TN",
                                                                "Cold_Acute",
                                                                "Cold_Long",
-                                                               "Cold_Memory")))
+                                                               "Cold_Memory"))) |>
+      dplyr::filter(magrittr::is_in(Tissue, input_tissues))
     rownames(key)<-key_names
 
 
     #prepare matrix
 
-
     subset_data <- subset_data |>
-      dplyr::select(unique_sample, CPM, SYMBOL)
+      dplyr::select(unique_sample, CPM, SYMBOL) |>
+    #log2 transform data
+      dplyr::mutate(CPM = log2(CPM))
 
     data_matrix <- tidyr::pivot_wider(subset_data,
                                       names_from = unique_sample,
@@ -570,20 +580,117 @@ heatmapplotter <- function(data_object, input_genes, tissueorder, cellheights, p
                                   Colv = NA,
                                   na.rm = T,
                                   cluster_cols = F,
-                                  fontsize_row = 14,
-                                  fontsize_col = 14,
-                                  cellwidth = 2,
+                                  fontsize_row = rowfont,
+                                  cellwidth = cellwidths,
                                   cellheight = cellheights,
                                   annotation_col = key,
                                   show_colnames = F,
                                   show_rownames = T,
                                   cluster_rows = T,
                                   main = plottitle,
-                                  fontsize = 16,
-                                  annotation_colors = AnnoColor
+                                  fontsize = fontsize,
+                                  annotation_colors = AnnoColor,
+                                  width = 20,
+                                  height = 40
     )
     return(Heatmap)
 
   }
+}
+
+#' ncbi url generator
+#'
+#' @param target_gene gene on the SYMBOL form
+#' @param gene_database a data frame containing the columns SYMBOL and ENSEMBL
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ncbi_url_generator <- function(target_gene, gene_database, ensembl_converter){
+
+  ensembl <- gene_database |>
+    duckplyr::filter(SYMBOL == target_gene) |>
+    duckplyr::pull(ENSEMBL)
+
+  if(length(ensembl)>1){
+    ensembl <- ensembl[1]
+  }
+
+  if(length(ensembl)==0){
+    return(
+      shiny::tagList(
+        shiny::h6(
+          paste0(
+            target_gene,
+            " does not have a ensemblID in the database")
+          )
+        )
+      )
+  }
+
+  else{
+    human_ensembl<- ensembl_converter |>
+      duckplyr::filter(ENSEMBL_mouse == ensembl) |>
+      duckplyr::pull(ENSEMBL_human)
+    if(length(human_ensembl)>1){
+      human_ensembl <- human_ensembl[1]
+    }
+
+    if(is.na(human_ensembl)){
+      return(
+        shiny::tagList(
+          shiny::h6(
+            paste0(
+              target_gene,
+              " does not have a ensemblID in the database")
+          )
+        )
+      )
+    }
+    else{
+      #was link to ncbi, user requested change to opentargets
+      # site_info <- paste0("https://www.ncbi.nlm.nih.gov/gene/?term=",
+      #                     ensembl)
+      site_info <- paste0("https://genetics.opentargets.org/gene/",
+                          human_ensembl)
+      url <- shiny::a(paste0("opentarget link to ",target_gene),
+                      href = site_info, target = "_blank")
+      return(
+        tagList(url)
+      )
+    }
+
+  }
+}
+
+secretome_preparer <- function(target_gene, secretome_database, ensembl_converter){
+  ensembl <- ensembl_converter |>
+    duckplyr::filter(SYMBOL == target_gene) |>
+    duckplyr::pull(ENSEMBL_human)
+
+  if(length(ensembl)>1){
+    ensembl <- ensembl[1]
+  }
+
+  if(is.na(ensembl)){
+    return(
+      shiny::tagList(
+        shiny::h6(
+          paste0(
+            target_gene,
+            " does not have a ensemblID in the database")
+        )
+      )
+    )
+  }
+
+  else{
+    secretome_subset <- secretome_database |>
+      duckplyr::filter(Ensembl == ensembl)
+    return(secretome_subset)
+  }
+
+
 }
 
