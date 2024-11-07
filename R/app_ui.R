@@ -36,7 +36,17 @@ app_ui <- function(request) {
     bslib::nav_panel(title = "Dataset information",
                     mod_data_set_information_ui("data_set_information_1"),
                     value = "infotab")
+    ,
+    tags$style(
+      HTML('
+          div[data-value="Home"] {
+            background-image: url("www/Mouse_tracks_in_snow.jpg");
+            background-size: cover;
+            height: 100vh;
+          }
+        ')
   ))
+  )
 }
 
 #' Add external Resources to the Application

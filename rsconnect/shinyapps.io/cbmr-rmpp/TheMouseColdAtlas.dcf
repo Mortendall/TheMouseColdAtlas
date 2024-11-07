@@ -5,6 +5,6 @@ account: cbmr-rmpp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 12581529
-bundleId: 9224702
+bundleId: 9303864
 url: https://cbmr-rmpp.shinyapps.io/TheMouseColdAtlas/
 version: 1

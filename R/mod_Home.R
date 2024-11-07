@@ -24,16 +24,19 @@ mod_Home_ui <- function(id){
         border: none;
         color: black;
       }
-    "))),
+    ")
+
+    )),
     #shinyWidgets::setBackgroundImage(src = "www/Mouse_tracks_in_snow.jpg"),
-    bslib::layout_columns(row_heights = c(1,2,1),
+    bslib::layout_columns(
+      row_heights = c(1,2,1),
                           col_widths = c(3,6,3),
                     column(12
-                    #        , bslib::tooltip(
-                    #   bsicons::bs_icon("info-circle",
-                    #                    title = ""),
-                    #   "Image courtesy of the National Park Service, public domain."
-                    # )
+                            , bslib::tooltip(
+                       bsicons::bs_icon("info-circle",
+                                        title = ""),
+                       "Image courtesy of the National Park Service, public domain."
+                     )
                     ),
                     tagList(column(12),
                             bslib::card(

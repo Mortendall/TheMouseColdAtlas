@@ -283,11 +283,15 @@ mod_Acute_Cold_server <- function(id,data,parentsession){
 
     output$ensembllink <- shiny::renderUI({
       req(input$gene_1)
+      shiny::tagList(
+        shiny::img(src = "www/opentargets.JPG",height = "10%", width = "8%"),
       ncbi_url_generator(target_gene = input$gene_1[1],
                          gene_database = data$ensembl,
                          ensembl_converter = data$ensembl_converter)
+      )
 
     })
+
 
     output$localizationui <- shiny::renderUI({
       req(input$gene_1)
