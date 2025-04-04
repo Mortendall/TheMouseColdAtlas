@@ -1,0 +1,161 @@
+---
+title: Network analysis of GO data
+author: 
+    name: Morten Dall
+    email: dall@sund.ku.dk
+format:
+    html:
+        code-fold: true
+        self-contained: true
+    
+---
+
+Analysis based on the work of Leonidas Lundell with support from Lars Roed 
+Ingerslev and myself - see [github repo](href = https://github.com/leonidaslundell/Ontology-Descent/tree/master)
+
+```{r network}
+#| echo: false
+#| warning: false
+library(tidyverse)
+library(duckplyr)
+library(data.table)
+library(igraph)
+
+flatNet <- as.list(GO.db::GOBPCHILDREN)
+
+allNodes <- unique(c(names(flatNet), unlist(flatNet)))
+flatNet <- flatNet[!is.na(flatNet)]
+onto2eg <- as.list(org.Mm.eg.db::org.Mm.egGO2ALLEGS)
+allNodes <- allNodes[allNodes %in% names(onto2eg)]
+flatNet <- flatNet[names(flatNet) %in% allNodes]
+flatNet <- reshape2::melt(flatNet)
+flatNet <- data.table::as.data.table(flatNet)
+colnames(flatNet) <- c("from", "to")
+# flatNet <- flatNet |> 
+#   dplyr::mutate(from = as.character(from),
+#                 to = as.character(to))
+flatNet <- flatNet[,c("from", "to"):=.(as.character(from),
+                                           as.character(to))]
+  
+graphNet <- igraph::graph_from_data_frame(flatNet)
+
+  #############
+  #add the names as a graph attribute
+ontoNames <- as.list(GO.db::GOTERM)
+ontoNames <- sapply(ontoNames, AnnotationDbi::Term)
+
+igraph::V(graphNet)$ontoTerm <- ontoNames[igraph::V(graphNet)$name]
+
+```
+
+Load in data and run clustering analysis
+
+```{r network analysis}
+#| echo: false
+#| warning: false
+
+target_go_terms <- readxl::read_xlsx(here::here("data/Biological_Process.xlsx"))
+
+significant_go_terms <- target_go_terms |> 
+  dplyr::filter(FDR<0.05) |> 
+  #some terms do not exist in the network for some reason?
+  dplyr::filter(ID %in% V(graphNet)$name)
+
+connectedSubgraph <- igraph::all_shortest_paths(graphNet, 
+                                                from = significant_go_terms$ID, 
+                                                to = significant_go_terms$ID, 
+                                                mode = "all")
+
+connectedSubgraph <- connectedSubgraph$res
+  connectedSubgraph <- unique(names(unlist(connectedSubgraph)))
+
+  #we check that all(significant_go_terms$ID %in% connectedSubgraph)==TRUE
+  
+  ontoNetSubgraph <- igraph::induced_subgraph(graphNet, connectedSubgraph)
+set.seed(429)
+   ontoClustCommunity <- leidenAlg::find_partition(igraph::as.undirected(ontoNetSubgraph),
+                                                           edge_weights = rep(1, ecount(ontoNetSubgraph)),
+                                                           resolution = .6) +1
+   
+   
+   ontoClust <- data.table::data.table(membership = ontoClustCommunity, names = igraph::V(ontoNetSubgraph)$name)
+
+   clusterTerm <- sapply(unique(ontoClust$membership), function(x){
+
+    x <- ontoClust$names[ontoClust$membership == x]
+
+    xSub <- igraph::induced_subgraph(graphNet, x)
+    #directionality is good here...
+    set.seed(429)
+    xMax <- igraph::centr_eigen(xSub)$vector
+    xTerm <- igraph::V(graphNet)$ontoTerm[match(x[which.max(xMax)],
+                                                 igraph::V(graphNet)$name)]
+
+   
+      return(xTerm)
+    
+  })
+
+  names(clusterTerm) <- unique(ontoClust$membership)
+
+  #############
+  #prepare result table
+
+  ontoClust <- data.frame(clusterNumber = ontoClust$membership,
+                          clusterTerm = clusterTerm[as.character(ontoClust$membership)],
+                          ontoID = ontoClust$names,
+                          ontoTerm = igraph::V(graphNet)$ontoTerm[match(ontoClust$names,
+                                                                       igraph::V(graphNet)$name)])
+
+     
+```
+
+
+```{r}
+
+ cols <- ggsci::pal_igv()(max(ontoClust$clusterNumber))
+  set.seed(429)
+  cols <- sample(cols, max(ontoClust$clusterNumber), replace = F)
+  cols <- cols[ontoClust$clusterNumber]
+  ontoClust$color <- cols
+
+  ontoClust[!ontoClust$ontoID %in% significant_go_terms$ID, "color"] <- "#808080"
+
+  #cluster name (instead of targeting a specific node, try to make a 2D space of nodes, and put the label in the center of that)
+
+  if(!all(igraph::V(ontoNetSubgraph)$name == ontoClust$ontoID)){stop("wrong order")}
+
+  igraph::vertex_attr(ontoNetSubgraph) <- list(name = ontoClust$ontoID,
+                                               color = ontoClust$color,
+                                               clusterTerm = ontoClust$clusterTerm,
+                                               label.color = ontoClust$color,
+                                               ontoTerm = ontoClust$ontoTerm)
+
+  igraph::V(ontoNetSubgraph)$size <- 0
+  igraph::V(ontoNetSubgraph)$size[igraph::V(ontoNetSubgraph)$name %in% significant_go_terms$ID] <- 2
+
+  ontoNetSubgraph <- as.undirected(ontoNetSubgraph)
+
+  ontoNetSubgraph <- igraph::add_layout_(ontoNetSubgraph, igraph::nicely(), igraph::component_wise())
+
+  
+```
+
+```{r}
+#####Ggraph test####
+  ggraph(ontoNetSubgraph, layout = "nicely")+
+    geom_edge_link0(width = 0.2, colour = "grey") +
+    geom_node_point(col = ontoClust$color,
+                    aes(fill = ontoClust$clusterTerm), 
+                    size = ifelse(ontoClust$color=="#808080", 0,5)) +
+    scale_fill_manual(
+            values = unique(ontoClust$color),
+            labels = unique(ontoClust$clusterTerm),
+            name = "cluster",
+            guide = "legend"
+        )+
+    guides(fill = guide_legend(override.aes = list(size = 5, shape = 21)))+
+        theme_graph() +
+        theme(legend.text = element_text(size = 14)) 
+  ```
+
