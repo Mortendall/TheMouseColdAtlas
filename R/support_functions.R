@@ -15,22 +15,22 @@ tissue_fill <- function(data_input, metadata, tissueorder){
   else{
 
       ENSEMBL <-
-        duckplyr::distinct(data_input, ENSEMBL) |> duckplyr::pull()
+        dplyr::distinct(data_input, ENSEMBL) |> dplyr::pull()
       Gene_name <-
-        duckplyr::distinct(data_input, SYMBOL) |> duckplyr::pull()
+        dplyr::distinct(data_input, SYMBOL) |> dplyr::pull()
       if (length(ENSEMBL) == 1) {
       #identify missing tissues from dataset
       missing_samples<- metadata |>
-        duckplyr::filter(!magrittr::is_in(Sample, data_input$Sample)) |>
+        dplyr::filter(!magrittr::is_in(Sample, data_input$Sample)) |>
         #create columns with NA
-        duckplyr::mutate(ENSEMBL = ENSEMBL,
+        dplyr::mutate(ENSEMBL = ENSEMBL,
                          SYMBOL = Gene_name,
                          CPM = NA) |>
         #select columns in correct order
-        duckplyr::select(colnames(data_input))
+        dplyr::select(colnames(data_input))
 
       #create data_input with added rows
-      output_data <- duckplyr::rows_append(data_input,
+      output_data <- dplyr::rows_append(data_input,
                                            missing_samples)
       output_data$Tissue <- factor(output_data$Tissue,
                                    levels = c(tissueorder$Tissue))
@@ -39,14 +39,14 @@ tissue_fill <- function(data_input, metadata, tissueorder){
 
       summary_stats <- output_data |>
         dplyr::group_by(Tissue) |>
-        duckplyr::summarise(sum = sum(CPM, na.rm = T)) |>
-        duckplyr::filter(sum == 0) |>
-        duckplyr::pull(Tissue)
+        dplyr::summarise(sum = sum(CPM, na.rm = T)) |>
+        dplyr::filter(sum == 0) |>
+        dplyr::pull(Tissue)
 
       if (length(summary_stats) != 0) {
         output_data <- output_data |>
-          duckplyr::mutate(CPM =
-                             duckplyr::case_when(magrittr::is_in(Tissue, summary_stats) ~
+          dplyr::mutate(CPM =
+                             dplyr::case_when(magrittr::is_in(Tissue, summary_stats) ~
                                                    0,
                                                  .default = CPM))
       }
@@ -60,31 +60,31 @@ tissue_fill <- function(data_input, metadata, tissueorder){
 
         #split the dataset in subdata
         subset_by_gene <-
-          purrr::map(key$ENSEMBL, ~duckplyr::filter(data_input, ENSEMBL==.x))
+          purrr::map(key$ENSEMBL, ~dplyr::filter(data_input, ENSEMBL==.x))
 
         #identify missing samples pr. gene
-        missing_samples <- purrr::map(subset_by_gene,~duckplyr::filter(metadata, !magrittr::is_in(Sample,
+        missing_samples <- purrr::map(subset_by_gene,~dplyr::filter(metadata, !magrittr::is_in(Sample,
                                                                                  .x$Sample)))
 
         missing_samples <- purrr::map2(missing_samples,
                                 subset_by_gene,
-                                ~duckplyr::mutate(.x, ENSEMBL = .y$ENSEMBL[1],
+                                ~dplyr::mutate(.x, ENSEMBL = .y$ENSEMBL[1],
                                                     SYMBOL = .y$SYMBOL[1],
                                                     CPM = NA))
 
         #select data in right order
         missing_samples <- purrr::map(missing_samples,
-                               ~duckplyr::select(.x, colnames(data_input)))
+                               ~dplyr::select(.x, colnames(data_input)))
 
         #append each dataset
 
         subset_by_gene <- purrr::map2(subset_by_gene,
                                missing_samples,
-                              ~duckplyr::rows_append(.x,
+                              ~dplyr::rows_append(.x,
                                                         .y))
 
 
-        output_data <- duckplyr::bind_rows(subset_by_gene)
+        output_data <- dplyr::bind_rows(subset_by_gene)
 
 
 
@@ -95,14 +95,14 @@ tissue_fill <- function(data_input, metadata, tissueorder){
 
         summary_stats <- output_data |>
           dplyr::group_by(Tissue) |>
-          duckplyr::summarise(sum = sum(CPM, na.rm = T)) |>
-          duckplyr::filter(sum == 0) |>
-          duckplyr::pull(Tissue)
+          dplyr::summarise(sum = sum(CPM, na.rm = T)) |>
+          dplyr::filter(sum == 0) |>
+          dplyr::pull(Tissue)
 
         if (length(summary_stats) != 0) {
           output_data <- output_data |>
-            duckplyr::mutate(CPM =
-                               duckplyr::case_when(magrittr::is_in(Tissue, summary_stats) ~
+            dplyr::mutate(CPM =
+                               dplyr::case_when(magrittr::is_in(Tissue, summary_stats) ~
                                                      0,
                                                    .default = CPM))
         }
@@ -128,7 +128,7 @@ plotly_list_generator <- function(data_input, gene_input, color_vector, tissueor
   names(plotly_list)<- gene_input
 
 for (gene in gene_input){
-    subset_data <- data_input |> duckplyr::filter(SYMBOL == gene)
+    subset_data <- data_input |> dplyr::filter(SYMBOL == gene)
     if(isTRUE(gene==gene_input[1])){
       p <- plotly::plot_ly(
         data = subset_data,
@@ -226,13 +226,13 @@ height_calculator <- function(gene_input){
 
 volcano_plotter <- function(input_data, input_genes, tissue, target_comparison){
   m <- input_data |>
-    duckplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
+    dplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
                        Tissue == tissue &
                        comparison == target_comparison)
 
 
   plotdata <- input_data |>
-    duckplyr::filter(Tissue == tissue &
+    dplyr::filter(Tissue == tissue &
                        comparison == target_comparison)  |>
     dplyr::mutate(is_in = dplyr::case_when(magrittr::is_in(SYMBOL, input_genes) ~ "Y",
                                            TRUE ~ "N"))
@@ -284,11 +284,11 @@ volcano_plotter <- function(input_data, input_genes, tissue, target_comparison){
 pdf_creater <- function(input_data, selected_gene, selected_tissue, selected_comparison){
 
     m <- input_data |>
-      duckplyr::filter(magrittr::is_in(SYMBOL, selected_gene)&
+      dplyr::filter(magrittr::is_in(SYMBOL, selected_gene)&
                             Tissue == selected_tissue &
                             comparison == selected_comparison)
     plotdata <- input_data |>
-      duckplyr::filter(Tissue == selected_tissue &
+      dplyr::filter(Tissue == selected_tissue &
                           comparison== selected_comparison) |>
       dplyr::mutate(is_in = dplyr::case_when(
         magrittr::is_in(SYMBOL,selected_gene)~ "Y",
@@ -336,19 +336,20 @@ pdf_creater <- function(input_data, selected_gene, selected_tissue, selected_com
 #'
 #' @return a data.table object for rendering
 
-DTdataprep <- function(input_data,
+DTdataprep <-
+  function(input_data,
                        input_gene,
                        input_tissue,
                        input_tissueorder,
                        input_comparison){
   req(!is.null(input_gene[1]))
   DEdata <- input_data |>
-    duckplyr::filter(SYMBOL == input_gene[1] & comparison == input_comparison)
+    dplyr::filter(SYMBOL == input_gene[1] & comparison == input_comparison)
   tissueorder <- input_tissueorder|>
-    duckplyr::filter(magrittr::is_in(input_tissue, DEdata$Tissue)==T)
+    dplyr::filter(magrittr::is_in(input_tissue, DEdata$Tissue)==T)
   DEdata <- DEdata |>
     dplyr::arrange(factor(Tissue, tissueorder$Tissue)) |>
-    duckplyr::select(-comparison) |>
+    dplyr::select(-comparison) |>
     DT::datatable(class = 'cell-border-stripes') |>
     DT::formatSignif(columns = c("logFC","PValue","FDR")) |>
     DT::formatRound(columns = c("avg_log2", "logFC"),digits = 2)
@@ -369,13 +370,13 @@ DTdataprep <- function(input_data,
 
 ma_plotter <- function(input_data, input_genes, tissue, target_comparison){
   m <- input_data |>
-    duckplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
+    dplyr::filter(magrittr::is_in(SYMBOL, input_genes)&
                        Tissue == tissue &
                        comparison == target_comparison)
 
 
   plotdata <- input_data |>
-    duckplyr::filter(Tissue == tissue &
+    dplyr::filter(Tissue == tissue &
                        comparison == target_comparison)  |>
     dplyr::mutate(is_in = dplyr::case_when(magrittr::is_in(SYMBOL, input_genes) ~ "Y",
                                            TRUE ~ "N"))
@@ -428,11 +429,11 @@ ma_plotter <- function(input_data, input_genes, tissue, target_comparison){
 pdf_creater_MA <- function(input_data, selected_gene, selected_tissue, selected_comparison){
 
   m <- input_data |>
-    duckplyr::filter(magrittr::is_in(SYMBOL, selected_gene)&
+    dplyr::filter(magrittr::is_in(SYMBOL, selected_gene)&
                        Tissue == selected_tissue &
                        comparison == selected_comparison)
   plotdata <- input_data |>
-    duckplyr::filter(Tissue == selected_tissue &
+    dplyr::filter(Tissue == selected_tissue &
                        comparison== selected_comparison) |>
     dplyr::mutate(is_in = dplyr::case_when(
       magrittr::is_in(SYMBOL,selected_gene)~ "Y",
@@ -480,7 +481,7 @@ pdf_creater_MA <- function(input_data, selected_gene, selected_tissue, selected_
 
 prism_transformer <- function(cpm_data, input_gene, comparison){
   prismtransformed <-  cpm_data|>
-    duckplyr::filter(magrittr::is_in(SYMBOL, input_gene[1]) & (Temperature == "TN"|Temperature == comparison))  |>
+    dplyr::filter(magrittr::is_in(SYMBOL, input_gene[1]) & (Temperature == "TN"|Temperature == comparison))  |>
     #make unique identifiers for groups
     dplyr::group_by(Tissue, Temperature) |>
     dplyr::mutate(Group = paste(Temperature,
@@ -517,7 +518,7 @@ heatmapplotter <- function(data_object, input_genes,input_tissues, tissueorder, 
   else{
     #subset data to include data from selection menu
     subset_data <- data_object |>
-      duckplyr::filter(SYMBOL %in% input_genes)
+      dplyr::filter(SYMBOL %in% input_genes)
     #factor setup
     subset_data <- subset_data |>
       dplyr::arrange(SYMBOL = SYMBOL,
@@ -610,8 +611,8 @@ heatmapplotter <- function(data_object, input_genes,input_tissues, tissueorder, 
 ncbi_url_generator <- function(target_gene, gene_database, ensembl_converter){
 
   ensembl <- gene_database |>
-    duckplyr::filter(SYMBOL == target_gene) |>
-    duckplyr::pull(ENSEMBL)
+    dplyr::filter(SYMBOL == target_gene) |>
+    dplyr::pull(ENSEMBL)
 
   if(length(ensembl)>1){
     ensembl <- ensembl[1]
@@ -631,8 +632,8 @@ ncbi_url_generator <- function(target_gene, gene_database, ensembl_converter){
 
   else{
     human_ensembl<- ensembl_converter |>
-      duckplyr::filter(ENSEMBL_mouse == ensembl) |>
-      duckplyr::pull(ENSEMBL_human)
+      dplyr::filter(ENSEMBL_mouse == ensembl) |>
+      dplyr::pull(ENSEMBL_human)
     if(length(human_ensembl)>1){
       human_ensembl <- human_ensembl[1]
     }
@@ -666,8 +667,8 @@ ncbi_url_generator <- function(target_gene, gene_database, ensembl_converter){
 
 secretome_preparer <- function(target_gene, secretome_database, ensembl_converter){
   ensembl <- ensembl_converter |>
-    duckplyr::filter(SYMBOL == target_gene) |>
-    duckplyr::pull(ENSEMBL_human)
+    dplyr::filter(SYMBOL == target_gene) |>
+    dplyr::pull(ENSEMBL_human)
 
   if(length(ensembl)>1){
     ensembl <- ensembl[1]
@@ -687,7 +688,7 @@ secretome_preparer <- function(target_gene, secretome_database, ensembl_converte
 
   else{
     secretome_subset <- secretome_database |>
-      duckplyr::filter(Ensembl == ensembl)
+      dplyr::filter(Ensembl == ensembl)
     return(secretome_subset)
   }
 

@@ -38,9 +38,17 @@ mod_data_set_information_ui <- function(id){
                                                      University of Copenhagen, partially funded by an unrestricted donation from the Novo Nordisk Foundation (Grant ID	Extended Funding of CBMR 2024–2028)",
                                                      icon = bsicons::bs_icon("house")),
                               bslib::accordion_panel(title = "version info",
-                                                     shiny::tagList(shiny::h5("current version: 0.1.1"),
+                                                     shiny::tagList(shiny::h5("current version: 0.2.1"),
                                                                     shiny::tagList(
-                                                                      "1st of November 2024. ",
+                                                                      "20th of March 2026. ",
+                                                                      tags$br(),
+                                                                      "- Added google analytics",
+                                                                      tags$br(),
+                                                                      "- Upgraded duckplyr version",
+                                                                      tags$br()
+                                                                    ),
+                                                                    shiny::tagList(
+                                                                      "1st of November 2024. (0.1.1)",
                                                                       tags$br(),
                                                                       "Added features: ",
                                                                       tags$br(),

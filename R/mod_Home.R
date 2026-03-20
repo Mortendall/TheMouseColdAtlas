@@ -90,7 +90,7 @@ mod_Home_server <- function(id, data, parentsession){
       data$tissueorder <-
         readRDS(here::here("data/tissueorder2.rds"))
       data$tissueorder <- data$tissueorder |>
-        duckplyr::mutate(
+        dplyr::mutate(
           Tissue = dplyr::case_when(
             Tissue == "Small.intestine" ~ "SmallIntestine",
             Tissue == "Large.intestine" ~ "LargeIntestine",

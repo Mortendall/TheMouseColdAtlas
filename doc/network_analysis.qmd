@@ -85,7 +85,7 @@ set.seed(429)
     x <- ontoClust$names[ontoClust$membership == x]
 
     xSub <- igraph::induced_subgraph(graphNet, x)
-    #directionality is good here...
+
     set.seed(429)
     xMax <- igraph::centr_eigen(xSub)$vector
     xTerm <- igraph::V(graphNet)$ontoTerm[match(x[which.max(xMax)],
@@ -136,21 +136,26 @@ set.seed(429)
 
   ontoNetSubgraph <- as.undirected(ontoNetSubgraph)
 
-  ontoNetSubgraph <- igraph::add_layout_(ontoNetSubgraph, igraph::nicely(), igraph::component_wise())
+  # ontoNetSubgraph <- igraph::add_layout_(ontoNetSubgraph, igraph::nicely(), igraph::component_wise())
 
   
 ```
 
 ```{r}
 #####Ggraph test####
+color_guide <- ontoClust |> 
+  dplyr::filter(color != "#808080") |> 
+  dplyr::distinct(color, .keep_all = T) |> 
+  dplyr::select(color, clusterTerm)
+
   ggraph(ontoNetSubgraph, layout = "nicely")+
     geom_edge_link0(width = 0.2, colour = "grey") +
     geom_node_point(col = ontoClust$color,
                     aes(fill = ontoClust$clusterTerm), 
                     size = ifelse(ontoClust$color=="#808080", 0,5)) +
     scale_fill_manual(
-            values = unique(ontoClust$color),
-            labels = unique(ontoClust$clusterTerm),
+            values = color_guide$color,
+            labels = color_guide$clusterTerm,
             name = "cluster",
             guide = "legend"
         )+

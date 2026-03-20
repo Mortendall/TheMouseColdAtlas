@@ -71,7 +71,7 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
     output$cpm_thermo <- plotly::renderPlotly({
       req(!is.null(input$gene_1[1]))
       display_data <- data$cpmcold|>
-        duckplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & Temperature == "TN")
+        dplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & Temperature == "TN")
 
 
 
@@ -80,7 +80,7 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
 
 
         metadata_tn <- data$metadata |>
-          duckplyr::filter(Temperature == "TN")
+          dplyr::filter(Temperature == "TN")
 
         display_data <- tissue_fill(display_data,
                                     metadata_tn,
@@ -137,8 +137,8 @@ mod_Thermoneutrality_server <- function(id,data,parentsession){
     #   DT::renderDataTable({
     #   req(input$gene_1)
     #   localization_table <- data$localization |>
-    #     duckplyr::filter(SYMBOL == input$gene_1[1]) |>
-    #     duckplyr::distinct(Term, .keep_all = T) |>
+    #     dplyr::filter(SYMBOL == input$gene_1[1]) |>
+    #     dplyr::distinct(Term, .keep_all = T) |>
     #     DT::datatable()
     # })
 

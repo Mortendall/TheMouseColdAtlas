@@ -76,11 +76,11 @@ mod_Chronic_Cold_server <- function(id,data,parentsession){
       req(!is.null(input$gene_1[1]))
       req(input$gene_1)
       display_data <- data$cpmcold|>
-        duckplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & (Temperature == "TN"|Temperature == "Cold_Long"))
+        dplyr::filter(magrittr::is_in(SYMBOL, input$gene_1) & (Temperature == "TN"|Temperature == "Cold_Long"))
 
 
       metadata_tn <- data$metadata |>
-        duckplyr::filter(Temperature == "TN"|Temperature == "Cold_Long")
+        dplyr::filter(Temperature == "TN"|Temperature == "Cold_Long")
 
       display_data <- tissue_fill(display_data,
                                   metadata_tn,
@@ -250,7 +250,7 @@ mod_Chronic_Cold_server <- function(id,data,parentsession){
                                               input$gene_1,
                                               "Cold_Long")
         rawdata <- data$cpmcold |>
-          duckplyr::filter(SYMBOL == input$gene_1[1] &
+          dplyr::filter(SYMBOL == input$gene_1[1] &
                              (Temperature== "TN"|Temperature == "Cold_Long"))
 
         filedata <- list(Rawdata = rawdata,

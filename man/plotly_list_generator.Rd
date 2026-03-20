@@ -4,7 +4,7 @@
 \alias{plotly_list_generator}
 \title{Plotly list generator}
 \usage{
-plotly_list_generator(data_input, gene_input, color_vector)
+plotly_list_generator(data_input, gene_input, color_vector, tissueorder)
 }
 \arguments{
 \item{data_input}{a data frame with CPM values}
