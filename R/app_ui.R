@@ -70,7 +70,8 @@ golem_add_external_resources <- function() {
       app_title = "TheMouseColdAtlas"
     ),
     tags$head(
-      includeHTML("inst/app/www/google-analytics.Rhtml"),
+      includeHTML("inst/app/www/google-analytics.Rhtml")),
+    tags$head(
       tags$style(HTML("
     .dataTable thead th {
       background-color: #000;
